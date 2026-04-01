@@ -274,4 +274,34 @@ public class PlayerMovement : MonoBehaviour
             footstepClips = loadedClips;
         }
     }
+
+    void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        Krzak krzak = hit.collider.GetComponentInParent<Krzak>();
+        if (krzak == null)
+        {
+            return;
+        }
+
+        Vector3 kickDirection = currentHorizontalVelocity;
+        kickDirection.y = 0f;
+        if (kickDirection.sqrMagnitude < 0.0001f)
+        {
+            krzak.StopMovement();
+            return;
+        }
+
+        Vector3 toObject = hit.collider.bounds.center - transform.position;
+        toObject.y = 0f;
+        if (toObject.sqrMagnitude > 0.0001f)
+        {
+            float pushAlignment = Vector3.Dot(kickDirection.normalized, toObject.normalized);
+            if (pushAlignment <= 0f)
+            {
+                return;
+            }
+        }
+
+        krzak.KickFromWorldDirection(kickDirection);
+    }
 }
