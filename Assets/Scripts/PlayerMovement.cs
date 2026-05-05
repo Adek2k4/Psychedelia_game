@@ -1,7 +1,8 @@
 using UnityEngine;
+using Unity.Netcode;
 
 [RequireComponent(typeof(CharacterController), typeof(AudioSource))]
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : NetworkBehaviour
 {
     public Camera playerCamera;
     public float walkSpeed = 6f;
@@ -45,18 +46,68 @@ public class PlayerMovement : MonoBehaviour
 
     private bool canMove = true;
 
-    void Start()
+    void Awake()
     {
         characterController = GetComponent<CharacterController>();
         audioSource = GetComponent<AudioSource>();
         audioSource.playOnAwake = false;
 
+        if (playerCamera == null)
+        {
+            playerCamera = GetComponentInChildren<Camera>(true);
+        }
+
         if (autoLoadFootstepsFromResources)
         {
             LoadFootstepsFromResources();
         }
+    }
 
-        wasGrounded = characterController.isGrounded;
+    public override void OnNetworkSpawn()
+    {
+        SetLocalState(IsOwner);
+    }
+
+    public void SetInputEnabled(bool enabled)
+    {
+        canMove = enabled;
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsOwner)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+    }
+
+    void SetLocalState(bool isLocalPlayer)
+    {
+        canMove = isLocalPlayer;
+
+        if (playerCamera != null)
+        {
+            playerCamera.enabled = isLocalPlayer;
+            AudioListener listener = playerCamera.GetComponent<AudioListener>();
+            if (listener != null)
+            {
+                listener.enabled = isLocalPlayer;
+            }
+        }
+
+        if (characterController != null)
+        {
+            characterController.enabled = isLocalPlayer;
+        }
+
+        if (!isLocalPlayer)
+        {
+            enabled = false;
+            return;
+        }
+
+        wasGrounded = characterController != null && characterController.isGrounded;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
