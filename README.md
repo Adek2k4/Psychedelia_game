@@ -1,0 +1,1 @@
+To repo zawiera gre Unity typu co-op na siec lokalna. Dwoch znajomych trafia na pustynie, znajduje walizke pelna narkotykow, a po zazyciu ich podroz zmienia sie w surrealna przygode pelna zaskoczen. Projekt skupia sie na wspolpracy dwoch graczy i eksploracji klimatu po drugiej stronie rzeczywistosci.
