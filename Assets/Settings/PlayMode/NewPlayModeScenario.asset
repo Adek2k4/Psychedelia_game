@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: NewPlayModeScenario
   m_EditorClassIdentifier: UnityEditor.MultiplayerModule.dll::Unity.Multiplayer.PlayMode.Editor.ScenarioConfig
   m_Description: 
-  m_EnableEditors: 1
+  m_EnableEditors: 0
   m_MainEditorInstance:
     Name: Main Editor
     <CorrespondingNodeId>k__BackingField: Main Editor|0_run
     m_Nodes:
     - Main Editor|0_run
     - Main Editor|0_deploy
-    m_Role: 1
+    m_Role: 3
     m_PlayerTag: 
     m_InitialScene: {fileID: 0}
   m_EditorInstances: []
@@ -30,6 +30,28 @@ MonoBehaviour:
     m_Nodes:
     - Instance - Build
     - Instance - Run
+    m_BuildProfile: {fileID: 11400000, guid: 63310cf5ec5b09247bf1216629018e4a, type: 2}
+    m_ServerSettings:
+      DeployMode: 0
+      SimulatorSettings:
+        AutoAllocate: 1
+      CliSettings:
+        UseDefaultArguments: 1
+        Port: 7777
+        QueryProtocol: 0
+        QueryPort: 20000
+    advancedConfiguration:
+      m_StreamLogsToMainEditor: 1
+      m_LogsColor: {r: 0.3643, g: 0.581, b: 0.8679, a: 1}
+      m_LocalArguments: -screen-fullscreen 0 -screen-width 1920 -screen-height 1080
+      m_SimulatedArguments: 
+      m_DeviceID: 
+      m_DeviceName: 
+  - Name: Instance(1)
+    <CorrespondingNodeId>k__BackingField: Instance(1) - Run
+    m_Nodes:
+    - Instance(1) - Build
+    - Instance(1) - Run
     m_BuildProfile: {fileID: 11400000, guid: 63310cf5ec5b09247bf1216629018e4a, type: 2}
     m_ServerSettings:
       DeployMode: 0
