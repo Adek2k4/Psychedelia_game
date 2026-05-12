@@ -1,7 +1,8 @@
 using UnityEngine;
+using Unity.Netcode;
 
 [RequireComponent(typeof(Rigidbody))]
-public class Krzak : MonoBehaviour
+public class Krzak : NetworkBehaviour
 {
     public float kickForce = 8f;
     public float liftForce = 1.2f;
@@ -22,8 +23,21 @@ public class Krzak : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
+    public override void OnNetworkSpawn()
+    {
+        if (rb != null)
+        {
+            rb.isKinematic = !IsServer;
+        }
+    }
+
     void FixedUpdate()
     {
+        if (!IsServer)
+        {
+            return;
+        }
+
         if (rb.linearVelocity.sqrMagnitude > 0f)
         {
             rb.linearVelocity = Vector3.MoveTowards(rb.linearVelocity, Vector3.zero, movementDamping * Time.fixedDeltaTime);
@@ -66,11 +80,34 @@ public class Krzak : MonoBehaviour
             return;
         }
 
-        KickFromWorldDirection(moveDirection);
+        RequestKickFromClient(moveDirection);
+    }
+
+    public void RequestKickFromClient(Vector3 worldDirection)
+    {
+        if (IsServer)
+        {
+            KickFromWorldDirection(worldDirection);
+        }
+        else
+        {
+            RequestKickServerRpc(worldDirection);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void RequestKickServerRpc(Vector3 worldDirection)
+    {
+        KickFromWorldDirection(worldDirection);
     }
 
     public void KickFromWorldDirection(Vector3 worldDirection)
     {
+        if (!IsServer)
+        {
+            return;
+        }
+
         if (Time.time - lastKickTime < minKickInterval)
         {
             return;
@@ -101,6 +138,11 @@ public class Krzak : MonoBehaviour
 
     public void StopMovement()
     {
+        if (!IsServer)
+        {
+            return;
+        }
+
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
     }

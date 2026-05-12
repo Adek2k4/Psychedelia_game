@@ -40,7 +40,7 @@ public class LanMainMenu : MonoBehaviour
         int titleFont = Mathf.RoundToInt(68f * fontScale);
         int subtitleFont = Mathf.RoundToInt(20f * fontScale);
 
-        float titleY = Mathf.Clamp(Screen.height * 0.08f, 24f, 80f);
+        float titleY = Mathf.Clamp(Screen.height * 0.08f, 32f, 200f);
         DrawKaleidoscopeTitle("PSYCHEDELIA", new Vector2(Screen.width * 0.5f, titleY), titleFont);
 
         float areaWidth = Mathf.Clamp(Screen.width * 0.54f, 420f, 720f);
@@ -220,9 +220,13 @@ public class LanMainMenu : MonoBehaviour
         GUIStyle style = new GUIStyle(GUI.skin.label);
         style.fontSize = Mathf.RoundToInt(fontSize);
         style.fontStyle = FontStyle.Bold;
-        style.alignment = TextAnchor.MiddleCenter;
+        style.alignment = TextAnchor.UpperLeft;
+        style.clipping = TextClipping.Overflow;
 
         float spacing = fontSize * 0.08f;
+        float lineHeight = style.CalcSize(new GUIContent("Mg")).y;
+        float rectHeight = Mathf.Max(lineHeight * 1.3f, fontSize * 1.2f);
+        float yTop = Mathf.Max(center.y, Screen.safeArea.y + 4f);
         float totalWidth = 0f;
         for (int i = 0; i < text.Length; i++)
         {
@@ -245,10 +249,16 @@ public class LanMainMenu : MonoBehaviour
             Color color = Color.HSVToRGB(hue, 0.85f, 1f);
             style.normal.textColor = color;
 
-            Rect charRect = new Rect(startX, center.y, chWidth, fontSize * 1.2f);
+            Rect charRect = new Rect(startX, yTop, chWidth, rectHeight);
             GUI.Label(charRect, ch, style);
             startX += chWidth + spacing;
         }
+    }
+
+    float ClampTitleCenterY(float centerY, float height)
+    {
+        float safeTop = Screen.safeArea.y;
+        return Mathf.Max(centerY, safeTop + height * 0.6f + 4f);
     }
 
     string DrawInputField(string value, GUIStyle textFieldStyle, float fontScale)

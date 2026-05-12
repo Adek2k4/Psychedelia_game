@@ -1,4 +1,4 @@
-Shader "Custom/KaleidoscopeTextureMorph"
+Shader "Custom/KaleidoscopeTextureMorphNoWaves"
 {
     Properties
     {
@@ -32,6 +32,7 @@ Shader "Custom/KaleidoscopeTextureMorph"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -48,6 +49,7 @@ Shader "Custom/KaleidoscopeTextureMorph"
                 float2 uv           : TEXCOORD0;
                 float3 localPos     : TEXCOORD1;
                 float3 localNormal  : NORMAL;
+                float fogCoord       : TEXCOORD2;
             };
 
             sampler2D _MainTex;
@@ -70,10 +72,12 @@ Shader "Custom/KaleidoscopeTextureMorph"
             v2f vert(appdata v)
             {
                 v2f o;
-                o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
+                VertexPositionInputs vertexInput = GetVertexPositionInputs(v.positionOS.xyz);
+                o.positionCS = vertexInput.positionCS;
                 o.uv = v.uv * _MainTex_ST.xy + _MainTex_ST.zw;
                 o.localPos = v.positionOS.xyz;
                 o.localNormal = v.normalOS;
+                o.fogCoord = ComputeFogFactor(vertexInput.positionCS.z);
                 return o;
             }
 
@@ -175,6 +179,7 @@ Shader "Custom/KaleidoscopeTextureMorph"
                 float lightingMod = saturate(dot(finalNormal, float3(0.5, 0.5, 1.0)));
                 finalColor.rgb *= max(0.5, lightingMod);
 
+                finalColor.rgb = MixFog(finalColor.rgb, i.fogCoord);
                 return finalColor;
             }
             ENDHLSL

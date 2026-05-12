@@ -20,8 +20,11 @@ public class PlayerMovement : NetworkBehaviour
     public float lookSpeed = 2f;
     public float lookXLimit = 45f;
     public float defaultHeight = 2f;
-    public float crouchHeight = 1f;
-    public float crouchSpeed = 3f;
+    public float walkBobAmplitude = 0.03f;
+    public float runBobAmplitude = 0.06f;
+    public float walkBobFrequency = 12f;
+    public float runBobFrequency = 18f;
+    public float bobLerpSpeed = 10f;
     public AudioClip[] footstepClips;
     public bool autoLoadFootstepsFromResources = true;
     public string footstepResourcesPath = "Audio/Footsteps";
@@ -30,7 +33,10 @@ public class PlayerMovement : NetworkBehaviour
     public float landingVolumeMultiplier = 1f;
     public float footstepIntervalWalk = 0.45f;
     public float footstepIntervalRun = 0.3f;
-    public float footstepIntervalCrouch = 0.6f;
+    public float spawnResyncDelay = 0.05f;
+    public float spawnResyncWindow = 1.5f;
+    public float groundedGraceTime = 0.1f;
+    public float landingMinAirTime = 0.12f;
 
     private Vector3 moveDirection = Vector3.zero;
     private float rotationX = 0;
@@ -43,6 +49,15 @@ public class PlayerMovement : NetworkBehaviour
     private bool wasMovingOnGround = false;
     private CharacterController characterController;
     private AudioSource audioSource;
+    private Vector3 defaultCameraLocalPos;
+    private bool defaultCameraLocalPosCached = false;
+    private float bobTimer = 0f;
+    private float currentBobOffset = 0f;
+    private Vector3 spawnPosition;
+    private Quaternion spawnRotation;
+    private float spawnTime = -999f;
+    private float lastGroundedTime = -999f;
+    private float airborneStartTime = -999f;
 
     private bool canMove = true;
 
@@ -57,6 +72,12 @@ public class PlayerMovement : NetworkBehaviour
             playerCamera = GetComponentInChildren<Camera>(true);
         }
 
+        if (playerCamera != null)
+        {
+            defaultCameraLocalPos = playerCamera.transform.localPosition;
+            defaultCameraLocalPosCached = true;
+        }
+
         if (autoLoadFootstepsFromResources)
         {
             LoadFootstepsFromResources();
@@ -66,6 +87,14 @@ public class PlayerMovement : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         SetLocalState(IsOwner);
+        spawnPosition = transform.position;
+        spawnRotation = transform.rotation;
+        spawnTime = Time.time;
+
+        if (IsServer)
+        {
+            StartCoroutine(ResyncSpawnPosition());
+        }
     }
 
     public void SetInputEnabled(bool enabled)
@@ -116,9 +145,13 @@ public class PlayerMovement : NetworkBehaviour
     {
         Vector3 forward = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
-        bool isGrounded = characterController.isGrounded;
-        bool isCrouching = canMove && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl));
-        bool sprintRequested = canMove && Input.GetKey(KeyCode.LeftShift) && !isCrouching;
+        bool isGroundedRaw = characterController.isGrounded;
+        if (isGroundedRaw)
+        {
+            lastGroundedTime = Time.time;
+        }
+        bool isGrounded = isGroundedRaw || (Time.time - lastGroundedTime <= groundedGraceTime);
+        bool sprintRequested = canMove && Input.GetKey(KeyCode.LeftShift);
         bool jumpPressed = Input.GetButtonDown("Jump") && canMove && isGrounded;
         bool useAirControl = !isGrounded || jumpPressed;
 
@@ -132,7 +165,7 @@ public class PlayerMovement : NetworkBehaviour
         float sprintTarget = (sprintRequested && hasMoveInput && isGrounded) ? 1f : 0f;
         sprintBlend = Mathf.MoveTowards(sprintBlend, sprintTarget, sprintStep);
 
-        float moveSpeed = isCrouching ? crouchSpeed : Mathf.Lerp(walkSpeed, runSpeed, sprintBlend);
+        float moveSpeed = Mathf.Lerp(walkSpeed, runSpeed, sprintBlend);
         Vector3 desiredHorizontalVelocity = ((forward * rawInput.y) + (right * rawInput.x)) * moveSpeed;
 
         if (!useAirControl && hasMoveInput)
@@ -213,25 +246,36 @@ public class PlayerMovement : NetworkBehaviour
 
         moveDirection.y = verticalVelocity;
 
-        if (isCrouching)
-        {
-            characterController.height = crouchHeight;
-        }
-        else
-        {
-            characterController.height = defaultHeight;
-        }
-
         characterController.Move(moveDirection * Time.deltaTime);
 
-        if (!wasGrounded && characterController.isGrounded)
+        bool groundedAfterMoveRaw = characterController.isGrounded;
+        if (groundedAfterMoveRaw)
         {
-            PlayRandomFootstep(landingVolumeMultiplier);
+            lastGroundedTime = Time.time;
         }
-        wasGrounded = characterController.isGrounded;
+        bool groundedAfterMove = groundedAfterMoveRaw || (Time.time - lastGroundedTime <= groundedGraceTime);
+
+        if (!groundedAfterMove)
+        {
+            if (wasGrounded)
+            {
+                airborneStartTime = Time.time;
+            }
+        }
+        else if (!wasGrounded && groundedAfterMoveRaw)
+        {
+            float airTime = Time.time - airborneStartTime;
+            if (airTime >= landingMinAirTime)
+            {
+                PlayRandomFootstep(landingVolumeMultiplier);
+            }
+        }
+
+        wasGrounded = groundedAfterMove;
 
         bool isRunning = currentHorizontalVelocity.magnitude > walkSpeed + 0.1f;
-        PlayFootsteps(isCrouching, isRunning);
+        PlayFootsteps(isRunning, groundedAfterMove);
+        UpdateCameraBob(isRunning, groundedAfterMove);
 
         if (canMove)
         {
@@ -242,18 +286,19 @@ public class PlayerMovement : NetworkBehaviour
         }
     }
 
-    void PlayFootsteps(bool isCrouching, bool isRunning)
+
+    void PlayFootsteps(bool isRunning, bool isGrounded)
     {
         if (footstepClips == null || footstepClips.Length == 0)
         {
             return;
         }
 
-        Vector3 horizontalVelocity = characterController.velocity;
+        Vector3 horizontalVelocity = currentHorizontalVelocity;
         horizontalVelocity.y = 0f;
         bool isMoving = horizontalVelocity.sqrMagnitude > 0.1f;
 
-        if (!characterController.isGrounded || !isMoving || !canMove)
+        if (!isGrounded || !isMoving || !canMove)
         {
             footstepTimer = 0f;
             wasMovingOnGround = false;
@@ -261,11 +306,7 @@ public class PlayerMovement : NetworkBehaviour
         }
 
         float interval = footstepIntervalWalk;
-        if (isCrouching)
-        {
-            interval = footstepIntervalCrouch;
-        }
-        else if (isRunning)
+        if (isRunning)
         {
             interval = footstepIntervalRun;
         }
@@ -288,6 +329,44 @@ public class PlayerMovement : NetworkBehaviour
         }
 
         wasMovingOnGround = true;
+    }
+
+    void UpdateCameraBob(bool isRunning, bool isGrounded)
+    {
+        if (playerCamera == null || !defaultCameraLocalPosCached)
+        {
+            return;
+        }
+
+        bool isMoving = currentHorizontalVelocity.sqrMagnitude > 0.1f;
+        bool shouldBob = canMove && isGrounded && isMoving;
+
+        float targetOffset = 0f;
+        if (shouldBob)
+        {
+            float freq = Mathf.Max(0f, isRunning ? runBobFrequency : walkBobFrequency);
+            float amp = Mathf.Max(0f, isRunning ? runBobAmplitude : walkBobAmplitude);
+            bobTimer += Time.deltaTime * freq;
+            targetOffset = Mathf.Sin(bobTimer) * amp;
+        }
+        else
+        {
+            bobTimer = 0f;
+        }
+
+        float lerpSpeed = Mathf.Max(0f, bobLerpSpeed);
+        if (lerpSpeed <= 0f)
+        {
+            currentBobOffset = targetOffset;
+        }
+        else
+        {
+            currentBobOffset = Mathf.Lerp(currentBobOffset, targetOffset, Time.deltaTime * lerpSpeed);
+        }
+
+        Vector3 camPos = defaultCameraLocalPos;
+        camPos.y += currentBobOffset;
+        playerCamera.transform.localPosition = camPos;
     }
 
     void PlayRandomFootstep(float volumeMultiplier)
@@ -326,19 +405,76 @@ public class PlayerMovement : NetworkBehaviour
         }
     }
 
+    System.Collections.IEnumerator ResyncSpawnPosition()
+    {
+        if (spawnResyncDelay > 0f)
+        {
+            yield return new WaitForSeconds(spawnResyncDelay);
+        }
+        else
+        {
+            yield return null;
+        }
+
+        if (!IsSpawned)
+        {
+            yield break;
+        }
+
+        ClientRpcParams rpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { OwnerClientId }
+            }
+        };
+
+        ForceSpawnResyncClientRpc(spawnPosition, spawnRotation, rpcParams);
+    }
+
+    [ClientRpc]
+    void ForceSpawnResyncClientRpc(Vector3 pos, Quaternion rot, ClientRpcParams rpcParams = default)
+    {
+        if (!IsOwner)
+        {
+            return;
+        }
+
+        if (spawnResyncWindow > 0f && Time.time - spawnTime > spawnResyncWindow)
+        {
+            return;
+        }
+
+        if (characterController != null)
+        {
+            characterController.enabled = false;
+        }
+
+        transform.SetPositionAndRotation(pos, rot);
+
+        if (characterController != null)
+        {
+            characterController.enabled = true;
+        }
+    }
+
     void OnControllerColliderHit(ControllerColliderHit hit)
     {
+        if (!IsOwner || !canMove)
+        {
+            return;
+        }
+
         Krzak krzak = hit.collider.GetComponentInParent<Krzak>();
         if (krzak == null)
         {
             return;
         }
 
-        Vector3 kickDirection = currentHorizontalVelocity;
+        Vector3 kickDirection = characterController.velocity;
         kickDirection.y = 0f;
         if (kickDirection.sqrMagnitude < 0.0001f)
         {
-            krzak.StopMovement();
             return;
         }
 
@@ -353,6 +489,6 @@ public class PlayerMovement : NetworkBehaviour
             }
         }
 
-        krzak.KickFromWorldDirection(kickDirection);
+        krzak.RequestKickFromClient(kickDirection);
     }
 }

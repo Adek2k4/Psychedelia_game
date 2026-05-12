@@ -229,8 +229,12 @@ public class PlayerInteractor : NetworkBehaviour
             return;
         }
 
+        style.clipping = TextClipping.Overflow;
         Vector2 size = style.CalcSize(new GUIContent(text));
-        Rect rect = new Rect(centerX - size.x * 0.5f, centerY - size.y * 0.5f, size.x, size.y);
+        float safeTop = Screen.safeArea.y;
+        float height = Mathf.Max(size.y * 1.8f, style.fontSize * 1.4f);
+        float y = Mathf.Max(centerY - height * 0.5f, safeTop + height * 0.2f);
+        Rect rect = new Rect(centerX - size.x * 0.5f, y, size.x, height);
         GUI.Label(rect, text, style);
     }
 

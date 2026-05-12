@@ -10,12 +10,6 @@ public class NetworkSessionManager : MonoBehaviour
     public GameObject hostPlayerPrefab;
     public GameObject clientPlayerPrefab;
     public Transform[] spawnPoints;
-    public Vector3[] spawnPositions = new Vector3[]
-    {
-        new Vector3(19.12333f, 0.63f, 80.12822f),
-        new Vector3(7.44f, 0.63f, 80.12822f)
-    };
-    public float fallbackSpacing = 4f;
 
     private readonly List<ulong> pendingClients = new List<ulong>();
     private bool registeredApprovalCallback = false;
@@ -28,6 +22,20 @@ public class NetworkSessionManager : MonoBehaviour
         {
             Debug.LogWarning("Brak NetworkManager w scenie.");
             return;
+        }
+
+        NetworkSessionManager[] managers = FindObjectsByType<NetworkSessionManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (managers != null && managers.Length > 1)
+        {
+            string sceneName = gameObject.scene.name;
+            Debug.LogWarning($"Znaleziono {managers.Length} NetworkSessionManager w instancji. Scene: {sceneName}");
+            for (int i = 0; i < managers.Length; i++)
+            {
+                if (managers[i] != null)
+                {
+                    Debug.LogWarning($"- {managers[i].name} (scene: {managers[i].gameObject.scene.name})");
+                }
+            }
         }
 
         if (NetworkManager.Singleton.ConnectionApprovalCallback == null)
@@ -146,6 +154,14 @@ public class NetworkSessionManager : MonoBehaviour
             return;
         }
 
+        System.Array.Sort(points, (a, b) =>
+        {
+            if (a == null && b == null) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+            return string.CompareOrdinal(a.gameObject.name, b.gameObject.name);
+        });
+
         spawnPoints = new Transform[points.Length];
         for (int i = 0; i < points.Length; i++)
         {
@@ -171,6 +187,11 @@ public class NetworkSessionManager : MonoBehaviour
         }
 
         RefreshSpawnPointsIfNeeded();
+        if (spawnPoints == null || spawnPoints.Length == 0)
+        {
+            Debug.LogWarning("Brak spawn pointow (NetworkSpawnPoint). Nie mozna zespawnowac graczy.");
+            return;
+        }
 
         for (int i = pendingClients.Count - 1; i >= 0; i--)
         {
@@ -192,6 +213,8 @@ public class NetworkSessionManager : MonoBehaviour
             Vector3 spawnPosition = GetSpawnPosition(index);
             Quaternion spawnRotation = GetSpawnRotation(index);
 
+            Debug.Log($"Spawn client {clientId} at index {index}: {spawnPosition}");
+
             GameObject prefab = GetPlayerPrefabForClient(clientId);
             if (prefab == null)
             {
@@ -211,8 +234,25 @@ public class NetworkSessionManager : MonoBehaviour
             }
 
             networkObject.SpawnAsPlayerObject(clientId, true);
+            Debug.Log($"Actual position for client {clientId}: {playerInstance.transform.position}");
+            StartCoroutine(LogSpawnAfterDelay(playerInstance, clientId));
             pendingClients.RemoveAt(i);
         }
+    }
+
+    System.Collections.IEnumerator LogSpawnAfterDelay(GameObject playerInstance, ulong clientId)
+    {
+        yield return new WaitForSeconds(1f);
+
+        if (playerInstance == null)
+        {
+            Debug.LogWarning($"Client {clientId} player object destroyed before delayed log.");
+            yield break;
+        }
+
+        Transform child = playerInstance.transform.childCount > 0 ? playerInstance.transform.GetChild(0) : null;
+        Vector3 childLocalPos = child != null ? child.localPosition : Vector3.zero;
+        Debug.Log($"Delayed position for client {clientId}: {playerInstance.transform.position} | child local: {childLocalPos}");
     }
 
     void RegisterNetworkPrefabs()
@@ -233,6 +273,13 @@ public class NetworkSessionManager : MonoBehaviour
     void TryAddNetworkPrefab(GameObject prefab)
     {
         if (prefab == null || NetworkManager.Singleton == null)
+        {
+            return;
+        }
+
+        if (NetworkManager.Singleton.NetworkConfig != null &&
+            NetworkManager.Singleton.NetworkConfig.Prefabs != null &&
+            NetworkManager.Singleton.NetworkConfig.Prefabs.Contains(prefab))
         {
             return;
         }
@@ -269,42 +316,31 @@ public class NetworkSessionManager : MonoBehaviour
 
     Vector3 GetSpawnPosition(int index)
     {
-        if (spawnPoints != null && index >= 0 && index < spawnPoints.Length && spawnPoints[index] != null)
+        if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            return spawnPoints[index].position;
+            return Vector3.zero;
         }
 
-        if (spawnPositions != null && index >= 0 && index < spawnPositions.Length)
-        {
-            return spawnPositions[index];
-        }
-
-        return new Vector3(index * fallbackSpacing, 0f, 0f);
+        int clamped = Mathf.Clamp(index, 0, spawnPoints.Length - 1);
+        return spawnPoints[clamped].position;
     }
 
     Quaternion GetSpawnRotation(int index)
     {
-        if (spawnPoints != null && index >= 0 && index < spawnPoints.Length && spawnPoints[index] != null)
+        if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            return spawnPoints[index].rotation;
+            return Quaternion.identity;
         }
 
-        return Quaternion.identity;
+        int clamped = Mathf.Clamp(index, 0, spawnPoints.Length - 1);
+        return spawnPoints[clamped].rotation;
     }
 
     int GetClientIndex(ulong clientId)
     {
-        int index = 0;
-        foreach (ulong id in NetworkManager.Singleton.ConnectedClientsIds)
-        {
-            if (id == clientId)
-            {
-                return index;
-            }
-
-            index++;
-        }
-
-        return 0;
+        List<ulong> ids = new List<ulong>(NetworkManager.Singleton.ConnectedClientsIds);
+        ids.Sort();
+        int index = ids.IndexOf(clientId);
+        return index < 0 ? 0 : index;
     }
 }
