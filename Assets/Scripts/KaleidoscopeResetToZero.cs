@@ -40,28 +40,14 @@ public class KaleidoscopeResetToZero : MonoBehaviour
                 if (mat.shader.name != shaderName) continue;
 
                 // WARTOŚCI Z OBRAZKA (zero preset)
-                mat.SetFloat("_AnimationSpeed",         0.0f);
-                mat.SetFloat("_Scale",                  0.1f);
-                mat.SetFloat("_FractalNormalInfluence", 0.0f);
-                mat.SetFloat("_FractalOpacity",         0.0f);
-                mat.SetFloat("_BlendMode",              2.0f); // Lerp
 
-                mat.SetFloat("_WaveTexEnable",  1.0f);
-                mat.SetFloat("_WaveNormEnable", 1.0f);
+            mat.SetFloat("_FractalOpacity", 0f);
 
-                mat.SetFloat("_WaveStrength", 0.0f);
-                mat.SetFloat("_WaveSpeed",    1.0f);
-                mat.SetFloat("_WaveFreqMin",  1.0f);
-                mat.SetFloat("_WaveFreqMax",  1.0f);
-                mat.SetFloat("_WaveAmpMin",   0.0f);
-                mat.SetFloat("_WaveAmpMax",   0.0f);
+            mat.SetFloat("_WaveTexEnable",  0.0f);
+            mat.SetFloat("_WaveNormEnable", 0.0f);
 
-                mat.SetFloat("_ShadowWaveStrength", 0.0f);
-                mat.SetFloat("_ShadowWaveSpeed",    1.0f);
-                mat.SetFloat("_ShadowWaveFreqMin",  0.1f);
-                mat.SetFloat("_ShadowWaveFreqMax",  0.1f);
-                mat.SetFloat("_ShadowWaveAmpMin",   0.0f);
-                mat.SetFloat("_ShadowWaveAmpMax",   0.0f);
+            mat.SetFloat("_ShadowWaveSpeed",    0f);
+
 
 #if UNITY_EDITOR
                 EditorUtility.SetDirty(mat);

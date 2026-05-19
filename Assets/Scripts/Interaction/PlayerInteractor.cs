@@ -12,9 +12,11 @@ public class PlayerInteractor : NetworkBehaviour
     public bool lookAtTarget = false;
     public float lookAtSpeed = 8f;
     public string promptText = "[E] by uzyc";
+    public string zabaPromptText = "[E] podnies zabe";
     public string waitingText = "Czekanie na drugiego gracza...";
     public string cancelText = "Nacisnij E aby anulowac";
     public Color promptColor = Color.white;
+    public Color zabaPromptColor = Color.white;
     public Vector2 referenceResolution = new Vector2(1920f, 1080f);
     public float uiScale = 1f;
     public float vignetteIntensity = 0.45f;
@@ -26,10 +28,13 @@ public class PlayerInteractor : NetworkBehaviour
 
     private PlayerMovement playerMovement;
     private InteractableSync currentTarget;
+    private ZabaCollectible zabaTarget;
+    private ZabaCounterManager zabaCounter;
     private float defaultFov = 60f;
     private bool defaultFovCached = false;
     private bool isWaiting = false;
     private bool hasTarget = false;
+    private bool hasZabaTarget = false;
     private float currentVignetteIntensity = 0f;
     private Texture2D vignetteTexture;
 
@@ -78,13 +83,37 @@ public class PlayerInteractor : NetworkBehaviour
             return;
         }
 
+        bool zabaEnabled = IsZabaCollectEnabled();
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         InteractableSync target = null;
+        ZabaCollectible zaba = null;
         hasTarget = false;
+        hasZabaTarget = false;
         if (Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactMask, QueryTriggerInteraction.Ignore))
         {
-            target = hit.collider.GetComponentInParent<InteractableSync>();
-            hasTarget = target != null;
+            zaba = hit.collider.GetComponentInParent<ZabaCollectible>();
+            if (zaba != null && (zaba.IsCollected || !zabaEnabled))
+            {
+                zaba = null;
+            }
+
+            if (zaba != null)
+            {
+                hasZabaTarget = true;
+            }
+            else
+            {
+                target = hit.collider.GetComponentInParent<InteractableSync>();
+                hasTarget = target != null;
+            }
+        }
+
+        zabaTarget = zaba;
+
+        if (zabaTarget != null && zabaEnabled && Input.GetKeyDown(interactKey))
+        {
+            zabaTarget.CollectServerRpc();
+            return;
         }
 
         if (target != null && Input.GetKeyDown(interactKey))
@@ -216,6 +245,11 @@ public class PlayerInteractor : NetworkBehaviour
             DrawCenteredLabel(centerX, centerY + 60f * fontScale, waitingText, style);
             DrawCenteredLabel(centerX, centerY + 90f * fontScale, cancelText, style);
         }
+        else if (hasZabaTarget)
+        {
+            style.normal.textColor = zabaPromptColor;
+            DrawCenteredLabel(centerX, centerY + 60f * fontScale, zabaPromptText, style);
+        }
         else if (hasTarget)
         {
             DrawCenteredLabel(centerX, centerY + 60f * fontScale, promptText, style);
@@ -236,6 +270,16 @@ public class PlayerInteractor : NetworkBehaviour
         float y = Mathf.Max(centerY - height * 0.5f, safeTop + height * 0.2f);
         Rect rect = new Rect(centerX - size.x * 0.5f, y, size.x, height);
         GUI.Label(rect, text, style);
+    }
+
+    bool IsZabaCollectEnabled()
+    {
+        if (zabaCounter == null)
+        {
+            zabaCounter = ZabaCounterManager.FindInScene();
+        }
+
+        return zabaCounter != null && zabaCounter.IsActive;
     }
 
     void UpdateVignette(bool zoomed)

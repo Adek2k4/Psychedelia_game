@@ -11,19 +11,37 @@ public class InteractableSync : NetworkBehaviour
     public float despawnDelay = 1f;
 
     [Header("Kaleidoscope targets (other objects)")]
-    [Tooltip("Rooty, pod którymi szukamy materiałów z naszym shaderem.")]
     public Transform[] kaleidoscopeRoots;
-
-    [Tooltip("Nazwa shadera, którego szukamy.")]
     public string kaleidoscopeShaderName = "Custom/KaleidoscopeTextureMorph";
+
+    [Header("Terrain materials (Inspector)")]
+    public Material terrainMaterialDefault;
+    public Material terrainMaterialSmall;
+    public string terrainSmallName = "Terrain_0";
+
+    [Header("Zaba rain (local pool)")]
+    public Transform zabaPoolRoot;
+    public string zabaPoolRootName = "deszcz";
+    public int zabaPerPlayer = 5;
+    public float zabaSpawnDelay = 60f;
+    public float zabaSpawnRadius = 3f;
+    public float zabaSpawnHeight = 25f;
+    public float zabaLaunchDelay = 1f;
+    public float zabaLaunchSpeed = 25f;
+    public float zabaDespawnAfterLaunch = 2f;
+    public string zabaClockSoundPath = "Sounds/Frog/clock";
+    public float zabaClockVolume = 1f;
 
     private readonly HashSet<ulong> readyClients = new HashSet<ulong>();
     private Coroutine despawnRoutine;
+    private bool changesApplied = false;
 
     public override void OnNetworkDespawn()
     {
-        // Ustaw preset NA INNYCH OBIEKTACH, zanim ten przedmiot zniknie
-        ApplyKaleidoscopePresetOnRoots();
+        if (!changesApplied)
+        {
+            ApplyChangesBeforeDespawn();
+        }
 
         readyClients.Clear();
         if (despawnRoutine != null)
@@ -38,14 +56,20 @@ public class InteractableSync : NetworkBehaviour
     {
         ulong sender = rpcParams.Receive.SenderClientId;
         if (ready)
+        {
             readyClients.Add(sender);
+        }
         else
+        {
             readyClients.Remove(sender);
+        }
 
         if (readyClients.Count >= requiredPlayers)
         {
             if (despawnRoutine == null)
+            {
                 despawnRoutine = StartCoroutine(DespawnAfterDelay());
+            }
         }
         else
         {
@@ -67,15 +91,42 @@ public class InteractableSync : NetworkBehaviour
 
         if (IsSpawned)
         {
+            if (IsServer)
+            {
+                ApplyChangesBeforeDespawn();
+                ApplyChangesClientRpc();
+                ScheduleZabaRain();
+                ZabaCounterManager counter = ZabaCounterManager.FindInScene();
+                if (counter != null)
+                {
+                    counter.ActivateAfterDelayServer(zabaSpawnDelay);
+                }
+            }
+
             NetworkObject.Despawn(true);
         }
 
         despawnRoutine = null;
     }
 
-    // -------------------------------------------------------
-    // Ustawianie presetów na wskazanych rootach
-    // -------------------------------------------------------
+    void ApplyChangesBeforeDespawn()
+    {
+        ApplyTerrainMaterials();
+        ApplyKaleidoscopePresetOnRoots();
+        changesApplied = true;
+    }
+
+    [ClientRpc]
+    void ApplyChangesClientRpc()
+    {
+        if (changesApplied)
+        {
+            return;
+        }
+
+        ApplyChangesBeforeDespawn();
+    }
+
     void ApplyKaleidoscopePresetOnRoots()
     {
         if (kaleidoscopeRoots == null) return;
@@ -87,7 +138,6 @@ public class InteractableSync : NetworkBehaviour
             var renderers = root.GetComponentsInChildren<Renderer>(true);
             foreach (var r in renderers)
             {
-                // TYLKO instancje materiałów – nie dotykamy assetów.[web:101][web:104]
                 Material[] mats = r.materials;
                 ApplyToMaterialsArray(mats);
             }
@@ -104,29 +154,149 @@ public class InteractableSync : NetworkBehaviour
             if (mat.shader == null) continue;
             if (mat.shader.name != kaleidoscopeShaderName) continue;
 
-            // preset z obrazka
-            mat.SetFloat("_AnimationSpeed",         0.63f);
-            mat.SetFloat("_Scale",                  1.0f);
-            mat.SetFloat("_FractalNormalInfluence", 1.02f);
-            mat.SetFloat("_FractalOpacity",         0.218f);
-            mat.SetFloat("_BlendMode",              2.0f);   // Lerp
-
-            mat.SetFloat("_WaveTexEnable",  1.0f);
+            mat.SetFloat("_FractalOpacity", 0.218f);
+            mat.SetFloat("_WaveTexEnable", 1.0f);
             mat.SetFloat("_WaveNormEnable", 1.0f);
-
-            mat.SetFloat("_WaveStrength", 0.07f);
-            mat.SetFloat("_WaveSpeed",    0.25f);
-            mat.SetFloat("_WaveFreqMin",  2.4f);
-            mat.SetFloat("_WaveFreqMax",  17.9f);
-            mat.SetFloat("_WaveAmpMin",   0.034f);
-            mat.SetFloat("_WaveAmpMax",   0.095f);
-
-            mat.SetFloat("_ShadowWaveStrength", 0.144f);
-            mat.SetFloat("_ShadowWaveSpeed",    0.74f);
-            mat.SetFloat("_ShadowWaveFreqMin",  5.3f);
-            mat.SetFloat("_ShadowWaveFreqMax",  8.1f);
-            mat.SetFloat("_ShadowWaveAmpMin",   0.144f);
-            mat.SetFloat("_ShadowWaveAmpMax",   0.152f);
+            mat.SetFloat("_ShadowWaveSpeed", 0.74f);
         }
+    }
+
+    void ApplyTerrainMaterials()
+    {
+        if (terrainMaterialDefault == null && terrainMaterialSmall == null)
+        {
+            Debug.LogWarning("InteractableSync: Terrain materials not assigned.");
+            return;
+        }
+
+        Terrain[] terrains = FindObjectsByType<Terrain>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (terrains == null || terrains.Length == 0)
+        {
+            return;
+        }
+
+        foreach (var terrain in terrains)
+        {
+            if (terrain == null)
+            {
+                continue;
+            }
+
+            Material target = terrainMaterialDefault;
+            if (terrain.name == terrainSmallName && terrainMaterialSmall != null)
+            {
+                target = terrainMaterialSmall;
+            }
+
+            if (target == null)
+            {
+                Debug.LogWarning($"InteractableSync: Missing terrain material for {terrain.name}.");
+                continue;
+            }
+
+            terrain.materialType = Terrain.MaterialType.Custom;
+            terrain.materialTemplate = target;
+        }
+    }
+
+    void ScheduleZabaRain()
+    {
+        if (!IsServer || NetworkManager.Singleton == null)
+        {
+            return;
+        }
+
+        int perPlayer = Mathf.Max(0, zabaPerPlayer);
+        if (perPlayer <= 0)
+        {
+            return;
+        }
+
+        List<Vector2> offsets = new List<Vector2>();
+        List<ulong> targetIds = new List<ulong>();
+
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        {
+            if (client == null || client.PlayerObject == null)
+            {
+                continue;
+            }
+
+            for (int i = 0; i < perPlayer; i++)
+            {
+                Vector2 offset = Random.insideUnitCircle * Mathf.Max(0f, zabaSpawnRadius);
+                offsets.Add(offset);
+                targetIds.Add(client.ClientId);
+            }
+        }
+
+        if (offsets.Count == 0)
+        {
+            Debug.LogWarning("InteractableSync: No players found for zaba rain.");
+            return;
+        }
+
+        PlayClockSoundClientRpc(transform.position, zabaClockVolume);
+
+        StartZabaRainClientRpc(
+            offsets.ToArray(),
+            targetIds.ToArray(),
+            Mathf.Max(0f, zabaSpawnDelay),
+            zabaSpawnHeight,
+            Mathf.Max(0f, zabaLaunchDelay),
+            Mathf.Max(0f, zabaLaunchSpeed),
+            Mathf.Max(0f, zabaDespawnAfterLaunch)
+        );
+    }
+
+    [ClientRpc]
+    void StartZabaRainClientRpc(
+        Vector2[] spawnOffsets,
+        ulong[] targetClientIds,
+        float spawnDelay,
+        float spawnHeight,
+        float launchDelay,
+        float launchSpeed,
+        float despawnAfterLaunch)
+    {
+        if (spawnOffsets == null || targetClientIds == null)
+        {
+            return;
+        }
+
+        if (spawnOffsets.Length == 0 || spawnOffsets.Length != targetClientIds.Length)
+        {
+            Debug.LogWarning("InteractableSync: Zaba spawn data mismatch.");
+            return;
+        }
+
+        ZabaRainManager.Instance.StartRain(
+            spawnOffsets,
+            targetClientIds,
+            zabaPoolRoot,
+            zabaPoolRootName,
+            spawnDelay,
+            spawnHeight,
+            launchDelay,
+            launchSpeed,
+            despawnAfterLaunch
+        );
+    }
+
+    [ClientRpc]
+    void PlayClockSoundClientRpc(Vector3 position, float volume)
+    {
+        if (string.IsNullOrWhiteSpace(zabaClockSoundPath))
+        {
+            return;
+        }
+
+        AudioClip clip = Resources.Load<AudioClip>(zabaClockSoundPath);
+        if (clip == null)
+        {
+            return;
+        }
+
+        AudioSource.PlayClipAtPoint(clip, position, volume);
     }
 }

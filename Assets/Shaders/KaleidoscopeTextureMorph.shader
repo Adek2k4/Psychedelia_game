@@ -16,7 +16,7 @@ Shader "Custom/KaleidoscopeTextureMorph"
 
         // Main Settings
         _AnimationSpeed ("Animation Speed", Range(0.0, 5.0)) = 1.0
-        _Scale ("Scale", Range(0.1, 10.0)) = 1.0
+        _Scale ("Scale", Range(0.001, 10.0)) = 1.0
         _FractalNormalInfluence ("Fractal Normal Influence", Range(0.0, 5.0)) = 0.0
         _FractalOpacity ("Fractal Color Opacity", Range(0.0, 1.0)) = 0.0
         [Enum(Add,0,Multiply,1,Lerp,2)] _BlendMode ("Blend Mode", Float) = 2.0
@@ -38,6 +38,10 @@ Shader "Custom/KaleidoscopeTextureMorph"
         _ShadowWaveFreqMax  ("Shadow Max Frequency", Range(0.1, 20.0)) = 4.0
         _ShadowWaveAmpMin   ("Shadow Min Amplitude", Range(0.0, 0.5)) = 0.02
         _ShadowWaveAmpMax   ("Shadow Max Amplitude", Range(0.0, 0.5)) = 0.08
+
+        // Dithered fade (opaque)
+        [Toggle] _DitherFadeEnable ("Dither Fade", Float) = 0.0
+        _DitherScale ("Dither Scale", Range(0.1, 10.0)) = 4.0
     }
 
     SubShader
@@ -118,7 +122,19 @@ Shader "Custom/KaleidoscopeTextureMorph"
                 float  _ShadowWaveFreqMax;
                 float  _ShadowWaveAmpMin;
                 float  _ShadowWaveAmpMax;
+                float  _DitherFadeEnable;
+                float  _DitherScale;
+                float4 _Channel0_ST;
+                float4 _Channel1_ST;
+                float4 _Channel2_ST;
+                float4 _Channel3_ST;
             CBUFFER_END
+
+            float DitherNoise(float3 posWS)
+            {
+                float2 p = posWS.xz * _DitherScale;
+                return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
+            }
 
             float2 GetWaveOffset(float2 uv, float time)
             {
@@ -187,10 +203,21 @@ Shader "Custom/KaleidoscopeTextureMorph"
                 float nextTextureIndex    = fmod(currentTextureIndex + 1.0, numTextures);
                 float blendFactor         = frac(totalTime);
 
-                half4 c0 = tex2D(_Channel0, transformUv(at, time) * 5.0);
-                half4 c1 = tex2D(_Channel1, transformUv(at, time) * 2.0);
-                half4 c2 = tex2D(_Channel2, transformUv(at, time) * 3.0);
-                half4 c3 = tex2D(_Channel3, transformUv(at, time) * 2.0);
+                float2 baseUv = transformUv(at, time);
+                float2 uv0 = baseUv * 5.0;
+                float2 uv1 = baseUv * 2.0;
+                float2 uv2 = baseUv * 3.0;
+                float2 uv3 = baseUv * 2.0;
+
+                uv0 = uv0 * _Channel0_ST.xy + _Channel0_ST.zw;
+                uv1 = uv1 * _Channel1_ST.xy + _Channel1_ST.zw;
+                uv2 = uv2 * _Channel2_ST.xy + _Channel2_ST.zw;
+                uv3 = uv3 * _Channel3_ST.xy + _Channel3_ST.zw;
+
+                half4 c0 = tex2D(_Channel0, uv0);
+                half4 c1 = tex2D(_Channel1, uv1);
+                half4 c2 = tex2D(_Channel2, uv2);
+                half4 c3 = tex2D(_Channel3, uv3);
 
                 half4 color1 = c0;
                 half4 color2 = c0;
@@ -216,6 +243,13 @@ Shader "Custom/KaleidoscopeTextureMorph"
 
     // 1) kolor bazowy
     half4 mainColor = tex2D(_MainTex, texUv) * _BaseColor;
+
+    if (_DitherFadeEnable > 0.5)
+    {
+        float baseAlpha = saturate(mainColor.a);
+        float dither = DitherNoise(i.positionWS);
+        clip(baseAlpha - dither);
+    }
 
     // 2) normal mapa (w "tangent space", ale użyjemy jej jako perturbacji)
     half4 rawNormal  = tex2D(_BumpMap, normUv);
@@ -308,6 +342,7 @@ Shader "Custom/KaleidoscopeTextureMorph"
             struct v2f_shadow
             {
                 float4 positionCS : SV_POSITION;
+                float3 positionWS : TEXCOORD0;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -333,7 +368,15 @@ Shader "Custom/KaleidoscopeTextureMorph"
                 float  _ShadowWaveFreqMax;
                 float  _ShadowWaveAmpMin;
                 float  _ShadowWaveAmpMax;
+                float  _DitherFadeEnable;
+                float  _DitherScale;
             CBUFFER_END
+
+            float DitherNoise(float3 posWS)
+            {
+                float2 p = posWS.xz * _DitherScale;
+                return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
+            }
 
             float ShadowWaveScalar(float2 posXZ, float time)
             {
@@ -394,12 +437,18 @@ Shader "Custom/KaleidoscopeTextureMorph"
             v2f_shadow ShadowVert(appdata_shadow v)
             {
                 v2f_shadow o;
+                o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionCS = GetShadowPositionCustomHClip(v);
                 return o;
             }
 
             half4 ShadowFrag(v2f_shadow i) : SV_Target
             {
+                if (_DitherFadeEnable > 0.5)
+                {
+                    float dither = DitherNoise(i.positionWS);
+                    clip(_BaseColor.a - dither);
+                }
                 return 0;
             }
             ENDHLSL

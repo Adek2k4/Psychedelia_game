@@ -215,7 +215,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3796170861
+  GlobalObjectIdHash: 3450781354
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -243,13 +243,13 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   playerCamera: {fileID: 4215003126686151707}
   walkSpeed: 8
-  runSpeed: 16
+  runSpeed: 12
   sprintAccelerationTime: 0.25
   runStopTime: 0.2
   airForwardSpeed: 8
   airBackwardSpeed: 6
   airDirectionResponsiveness: 22
-  jumpPower: 10
+  jumpPower: 6
   gravity: 10
   groundedGravity: -2
   fallMultiplier: 2.2
@@ -277,6 +277,10 @@ MonoBehaviour:
   landingVolumeMultiplier: 1
   footstepIntervalWalk: 0.45
   footstepIntervalRun: 0.3
+  spawnResyncDelay: 0.05
+  spawnResyncWindow: 1.5
+  groundedGraceTime: 0.1
+  landingMinAirTime: 0.12
 --- !u!82 &9019381618563994805
 AudioSource:
   m_ObjectHideFlags: 0
@@ -433,9 +437,11 @@ MonoBehaviour:
   lookAtTarget: 0
   lookAtSpeed: 8
   promptText: '[E] by uzyc'
+  zabaPromptText: '[E] podnies zabe'
   waitingText: Czekanie na drugiego gracza...
   cancelText: Nacisnij E aby anulowac
   promptColor: {r: 1, g: 1, b: 1, a: 1}
+  zabaPromptColor: {r: 1, g: 1, b: 1, a: 1}
   referenceResolution: {x: 1920, y: 1080}
   uiScale: 1
   vignetteIntensity: 0.45

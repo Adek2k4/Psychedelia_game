@@ -21,21 +21,20 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Road009C
-  m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
+  m_Shader: {fileID: 4800000, guid: e491475351ea00e469034043f9951841, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _METALLICGLOSSMAP
   - _NORMALMAP
   - _OCCLUSIONMAP
   - _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-  m_InvalidKeywords:
-  - _METALLICGLOSSMAP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
-  stringTagMap:
-    RenderType: Opaque
+  stringTagMap: {}
   disabledShaderPasses:
   - MOTIONVECTORS
   m_LockedProperties: 
@@ -56,7 +55,23 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
         m_Texture: {fileID: 2800000, guid: 453e5876137a5414db76f8a8057f175c, type: 3}
-        m_Scale: {x: 1, y: 1}
+        m_Scale: {x: 1, y: 100}
+        m_Offset: {x: 0, y: 0}
+    - _Channel0:
+        m_Texture: {fileID: 2800000, guid: 9a5c41ea75f26d7448b2881d55828762, type: 3}
+        m_Scale: {x: 1, y: 10}
+        m_Offset: {x: 0, y: 0}
+    - _Channel1:
+        m_Texture: {fileID: 2800000, guid: f105a375f37acff499bbe3092413532a, type: 3}
+        m_Scale: {x: 1, y: 10}
+        m_Offset: {x: 0, y: 0}
+    - _Channel2:
+        m_Texture: {fileID: 2800000, guid: 6285a858a8b89ad46b03ad528e18beb0, type: 3}
+        m_Scale: {x: 1, y: 10}
+        m_Offset: {x: 0, y: 0}
+    - _Channel3:
+        m_Texture: {fileID: 2800000, guid: bf13536c5ad883b40a9c6bb43de9f50c, type: 3}
+        m_Scale: {x: 1, y: 10}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
         m_Texture: {fileID: 0}
@@ -155,11 +170,13 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
+    - _AnimationSpeed: 0.29
     - _BASE_COLOR_WEIGHT: 1
     - _BUMP_MAP_STRENGTH: 0.3
     - _Blend: 0
+    - _BlendMode: 2
     - _BlendModePreserveSpecular: 1
-    - _BumpScale: 1
+    - _BumpScale: -1.23
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
     - _ColorMask: 15
@@ -171,6 +188,8 @@ Material:
     - _DstBlendAlpha: 0
     - _EMISSION_WEIGHT: 1
     - _EnvironmentReflections: 1
+    - _FractalNormalInfluence: 1.5
+    - _FractalOpacity: 0
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 1
@@ -188,6 +207,13 @@ Material:
     - _ReceiveShadows: 1
     - _SPECULAR_IOR: 1.5
     - _SPECULAR_ROUGHNESS: 0
+    - _Scale: 0.03
+    - _ShadowWaveAmpMax: 0.08
+    - _ShadowWaveAmpMin: 0.02
+    - _ShadowWaveFreqMax: 4
+    - _ShadowWaveFreqMin: 1
+    - _ShadowWaveSpeed: 0
+    - _ShadowWaveStrength: 0
     - _Smoothness: 0
     - _SmoothnessTextureChannel: 1
     - _SpecularHighlights: 1
@@ -207,6 +233,14 @@ Material:
     - _UseOpacityMap: 0
     - _UseRoughnessMap: 0
     - _UseUIAlphaClip: 0
+    - _WaveAmpMax: 0.193
+    - _WaveAmpMin: 0.183
+    - _WaveFreqMax: 25.9
+    - _WaveFreqMin: 22.9
+    - _WaveNormEnable: 0
+    - _WaveSpeed: 0.2
+    - _WaveStrength: 0.009
+    - _WaveTexEnable: 0
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
