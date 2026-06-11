@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ArenaKaleido
+  m_Shader: {fileID: 4800000, guid: e491475351ea00e469034043f9951841, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _WAVENORMENABLE_ON
+  - _WAVETEXENABLE_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Channel0:
+        m_Texture: {fileID: 2800000, guid: 9a5c41ea75f26d7448b2881d55828762, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Channel1:
+        m_Texture: {fileID: 2800000, guid: f105a375f37acff499bbe3092413532a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Channel2:
+        m_Texture: {fileID: 2800000, guid: 6285a858a8b89ad46b03ad528e18beb0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Channel3:
+        m_Texture: {fileID: 2800000, guid: bf13536c5ad883b40a9c6bb43de9f50c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 8cc4b3532c25e6a43b5b2ad4b2c949ef, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AnimationSpeed: 1.8
+    - _BlendMode: 2
+    - _BumpScale: 1
+    - _DitherFadeEnable: 0
+    - _DitherScale: 4
+    - _FractalNormalInfluence: 1
+    - _FractalOpacity: 0.7
+    - _Scale: 2.5
+    - _ShadowWaveAmpMax: 0.168
+    - _ShadowWaveAmpMin: 0.035
+    - _ShadowWaveFreqMax: 6.8
+    - _ShadowWaveFreqMin: 1.4
+    - _ShadowWaveSpeed: 1.68
+    - _ShadowWaveStrength: 0.189
+    - _WaveAmpMax: 0.078
+    - _WaveAmpMin: 0.021
+    - _WaveFreqMax: 18
+    - _WaveFreqMin: 6.1
+    - _WaveNormEnable: 1
+    - _WaveSpeed: 1.68
+    - _WaveStrength: 1.6
+    - _WaveTexEnable: 1
+    m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

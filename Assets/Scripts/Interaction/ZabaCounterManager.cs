@@ -7,6 +7,9 @@ public class ZabaCounterManager : NetworkBehaviour
 {
     public int targetCount = 10;
     public bool resetOnActivate = true;
+
+    [Header("Boss arena")]
+    public string arenaSceneName = "Odrealnienie";
     public string imageResourcePath = "Images/zaba";
     public Vector2 referenceResolution = new Vector2(1920f, 1080f);
     public float uiScale = 1f;
@@ -85,7 +88,13 @@ public class ZabaCounterManager : NetworkBehaviour
         }
 
         int next = currentCount.Value + Mathf.Max(0, value);
+        bool wasComplete = currentCount.Value >= targetCount;
         currentCount.Value = Mathf.Min(next, Mathf.Max(0, targetCount));
+
+        if (!wasComplete && currentCount.Value >= targetCount && targetCount > 0)
+        {
+            BossArenaTeleport.TeleportToArena(arenaSceneName);
+        }
     }
 
     void OnGUI()

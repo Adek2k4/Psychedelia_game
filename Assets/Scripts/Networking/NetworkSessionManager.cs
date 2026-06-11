@@ -233,7 +233,11 @@ public class NetworkSessionManager : MonoBehaviour
                 continue;
             }
 
-            networkObject.SpawnAsPlayerObject(clientId, true);
+            // destroyWithScene=false: players must survive networked scene
+            // transitions (e.g. Pustynia -> Odrealnienie via host pressing P).
+            // With true, the player objects (and their cameras) are destroyed
+            // when the scene unloads, leaving the new scene with no camera.
+            networkObject.SpawnAsPlayerObject(clientId, false);
             Debug.Log($"Actual position for client {clientId}: {playerInstance.transform.position}");
             StartCoroutine(LogSpawnAfterDelay(playerInstance, clientId));
             pendingClients.RemoveAt(i);

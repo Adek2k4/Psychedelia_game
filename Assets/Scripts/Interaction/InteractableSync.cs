@@ -270,6 +270,9 @@ public class InteractableSync : NetworkBehaviour
             return;
         }
 
+        // DEBUG: confirm this client received the RPC at all. Remove once fixed.
+        Debug.Log($"[ZabaRain] StartZabaRainClientRpc received (localClientId={NetworkManager.Singleton?.LocalClientId}, count={spawnOffsets.Length}, poolRoot={(zabaPoolRoot != null ? zabaPoolRoot.name : "null")})");
+
         ZabaRainManager.Instance.StartRain(
             spawnOffsets,
             targetClientIds,

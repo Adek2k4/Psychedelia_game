@@ -71,6 +71,9 @@ public class ZabaRainManager : MonoBehaviour
             return;
         }
 
+        // DEBUG: confirm pool resolved correctly. Remove once fixed.
+        Debug.Log($"[ZabaRain] StartRain: pool root={poolRoot.name}, poolCount={pool.Count}, requested={offsets.Length}");
+
         StartCoroutine(SpawnRoutine(
             offsets,
             targetClientIds,
@@ -196,6 +199,8 @@ public class ZabaRainManager : MonoBehaviour
             Transform playerTransform = GetPlayerTransform(targetClientIds[i]);
             if (playerTransform == null)
             {
+                // DEBUG: this is the most likely silent failure point on clients.
+                Debug.LogWarning($"[ZabaRain] No player transform for clientId={targetClientIds[i]}, skipping zaba {i}.");
                 continue;
             }
 
